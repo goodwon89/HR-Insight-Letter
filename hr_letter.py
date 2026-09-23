@@ -393,10 +393,9 @@ def build_email_html(title: str, content_html: str, date_str: str,
 
 <div style="max-width:660px;margin:0 auto;padding:32px 16px 48px;">
 
-  <!-- ① 헤더 (흰 배경, 캡슐형 상단 — 좌: 브랜드+날짜+부제 / 우: 로고) -->
+  <!-- ① 헤더 (옅은 틸 배경 블록 — 테두리 없음, 좌: 브랜드+날짜+부제 / 우: 로고) -->
   <table width="100%" cellpadding="0" cellspacing="0"
-         style="background:#ffffff;border:1.5px solid {TEAL};border-bottom:none;
-         border-radius:16px 16px 0 0;">
+         style="background:#F4FDFC;border-radius:16px 16px 0 0;">
     <tr>
       <td style="padding:24px 28px 20px;">
         <table width="100%" cellpadding="0" cellspacing="0">
@@ -427,8 +426,8 @@ def build_email_html(title: str, content_html: str, date_str: str,
     {content_html}
   </div>
 
-  <!-- ③ 푸터 (캡슐형 하단 — 아카이브 CTA) -->
-  <div style="background:#F4FDFC;border:1.5px solid {TEAL};border-top:none;
+  <!-- ③ 푸터 (옅은 틸 배경 블록 — 테두리 없음, 아카이브 CTA) -->
+  <div style="background:#F4FDFC;
     padding:22px 28px;text-align:center;">
     <a href="{archive_url}" target="_blank" rel="noopener"
       style="display:inline-block;background:{TEAL};color:#ffffff;text-decoration:none;
