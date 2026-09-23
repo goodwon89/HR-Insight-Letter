@@ -43,10 +43,13 @@ LOGO_DATA_URI, LOGO_MIME = _load_logo_base64()
 KST             = timezone(timedelta(hours=9))
 ARCHIVE_FILE    = "letters_archive.json"
 INDEX_FILE      = "index.html"
-NEWSLETTER_NAME = "인재경영실 Insight Letter"
+NEWSLETTER_NAME = "SSI Weekly HR Insight"
 ORG_NAME        = "상상인그룹 인재경영실"
-TEAL            = "#00A7A7"
-DARK_NAVY       = "#1e2235"
+TEAL            = "#00BFB6"   # 포인트 컬러 (R0 G191 B182)
+DARK_NAVY       = "#273646"   # 본문 텍스트 컬러 (R39 G54 B70) — 변수명은 유지, 값만 신규 팔레트로 교체
+LINK_TEXT       = "#00958D"   # 링크 텍스트 실색상(대비 확보용 진한 톤)
+LINK_TINT       = "#B2F0EB"   # 사용자 지정 링크컬러(R178 G240 B235) — 밑줄/하이라이트 전용
+                               # (본문 배경에 텍스트로 그대로 쓰면 명도 대비가 약 1.3:1로 WCAG 기준 미달)
 NOTION_API_VER  = "2022-06-28"
 
 # ▼ GitHub Pages 로고 URL (Gmail 호환용)
@@ -170,7 +173,8 @@ def rt_to_html(rich_texts: list) -> str:
                  f'border-radius:3px;font-size:88%;font-family:monospace;">{t}</code>')
         if h:
             t = (f'<a href="{h}" target="_blank" rel="noopener"'
-                 f' style="color:{TEAL};text-decoration:underline;">{t}</a>')
+                 f' style="color:{LINK_TEXT};text-decoration:underline;'
+                 f'text-decoration-color:{LINK_TINT};text-decoration-thickness:2px;">{t}</a>')
         out += t
     return out
 
@@ -212,7 +216,7 @@ def blocks_to_html(blocks: list):
                 excerpt_parts.append(plain)
             if text.strip():
                 html += (f'<p style="margin:0 0 16px;line-height:1.8;'
-                         f'color:#374151;font-size:15px;">{text}</p>')
+                         f'color:{DARK_NAVY};font-size:15px;">{text}</p>')
             else:
                 html += '<div style="height:8px;"></div>'
 
@@ -223,13 +227,18 @@ def blocks_to_html(blocks: list):
                      f'margin:32px 0 14px;padding-bottom:10px;'
                      f'border-bottom:2px solid {TEAL};">{t}</h1>')
         elif bt == "heading_2":
+            # 다이제스트 구조에서는 heading_2 = 개별 기사 제목.
+            # 바로 위에 heading_3(카테고리 라벨)을 붙여 쓰면 카테고리+제목 조합으로 보인다.
             t = rt_to_html(b["heading_2"].get("rich_text", []))
-            html += (f'<h2 style="font-size:17px;font-weight:700;color:{DARK_NAVY};'
-                     f'margin:26px 0 10px;">{t}</h2>')
+            html += (f'<h2 style="font-size:21px;font-weight:800;color:{DARK_NAVY};'
+                     f'margin:8px 0 10px;line-height:1.4;letter-spacing:-.2px;">{t}</h2>')
         elif bt == "heading_3":
+            # 다이제스트 구조에서 두 가지 용도로 재사용:
+            #  1) 기사 heading_2 바로 앞에 써서 "카테고리 라벨" 역할 (예: 채용·인력)
+            #  2) 기사 안에서 "관련기사"/"OOO 뉴스 더보기" 소제목 역할
             t = rt_to_html(b["heading_3"].get("rich_text", []))
-            html += (f'<h3 style="font-size:17px;font-weight:700;color:{TEAL};'
-                     f'margin:24px 0 10px;letter-spacing:-0.2px;line-height:1.5;">{t}</h3>')
+            html += (f'<h3 style="font-size:13px;font-weight:800;color:{TEAL};'
+                     f'margin:28px 0 2px;letter-spacing:.02em;line-height:1.5;">{t}</h3>')
 
         # ── bulleted list (연속 항목 묶음) ──
         elif bt == "bulleted_list_item":
@@ -238,7 +247,7 @@ def blocks_to_html(blocks: list):
             while i < len(blocks) and blocks[i].get("type") == "bulleted_list_item":
                 rts_li = blocks[i]["bulleted_list_item"].get("rich_text", [])
                 t = rt_to_html(rts_li)
-                items += f'<li style="margin-bottom:8px;line-height:1.7;color:#374151;">{t}</li>'
+                items += f'<li style="margin-bottom:8px;line-height:1.7;color:{DARK_NAVY};">{t}</li>'
                 if not first_plain:
                     first_plain = redact_secrets("".join(r.get("plain_text","") for r in rts_li)).strip()
                 i += 1
@@ -254,7 +263,7 @@ def blocks_to_html(blocks: list):
             while i < len(blocks) and blocks[i].get("type") == "numbered_list_item":
                 rts_li = blocks[i]["numbered_list_item"].get("rich_text", [])
                 t = rt_to_html(rts_li)
-                items += f'<li style="margin-bottom:8px;line-height:1.7;color:#374151;">{t}</li>'
+                items += f'<li style="margin-bottom:8px;line-height:1.7;color:{DARK_NAVY};">{t}</li>'
                 if not first_plain:
                     first_plain = redact_secrets("".join(r.get("plain_text","") for r in rts_li)).strip()
                 i += 1
@@ -264,19 +273,21 @@ def blocks_to_html(blocks: list):
             continue
 
         # ── divider ──
+        # 다이제스트 구조에서는 기사와 기사 사이 구분선으로도 쓰인다.
         elif bt == "divider":
-            html += f'<hr style="border:none;border-top:2px solid #e5e7eb;margin:28px 0;">'
+            html += f'<hr style="border:none;border-top:1px solid #DCEEEC;margin:32px 0;">'
 
         # ── callout (table로 이메일 호환) ──
+        # 다이제스트 구조에서 "이번 주 HR 요약" 박스, 기사 마무리 인사이트 박스로 활용.
         elif bt == "callout":
             icon_d = b["callout"].get("icon") or {}
             icon   = icon_d.get("emoji", "💡") if icon_d.get("type") == "emoji" else "💡"
             t      = rt_to_html(b["callout"].get("rich_text", []))
             html  += (
                 f'<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px;">'
-                f'<tr><td style="background:#e6f7f7;border-left:4px solid {TEAL};'
+                f'<tr><td style="background:#F4FDFC;border-left:3px solid {TEAL};'
                 f'border-radius:0 8px 8px 0;padding:14px 18px;line-height:1.75;'
-                f'color:#374151;font-size:15px;">{icon}&nbsp;&nbsp;{t}</td></tr></table>'
+                f'color:{DARK_NAVY};font-size:14.5px;">{icon}&nbsp;&nbsp;{t}</td></tr></table>'
             )
 
         # ── quote ──
@@ -285,7 +296,7 @@ def blocks_to_html(blocks: list):
             html += (
                 f'<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px;">'
                 f'<tr><td style="background:#f9fafb;border-left:4px solid {TEAL};'
-                f'padding:14px 20px;color:#6b7280;font-style:italic;'
+                f'padding:14px 20px;color:#5c6b78;font-style:italic;'
                 f'line-height:1.75;font-size:15px;border-radius:0 8px 8px 0;">{t}</td></tr></table>'
             )
 
@@ -297,11 +308,11 @@ def blocks_to_html(blocks: list):
             cap = "".join(r.get("plain_text", "") for r in img.get("caption", []))
             if src:
                 html += (
-                    f'<div style="text-align:center;margin:0 0 16px;">'
+                    f'<div style="text-align:center;margin:4px 0 16px;">'
                     f'<img src="{src}" alt="{esc(cap)}" width="100%"'
                     f' style="max-width:580px;border-radius:10px;'
-                    f'box-shadow:0 2px 12px rgba(0,0,0,0.08);">'
-                    + (f'<p style="font-size:12px;color:#9ca3af;margin:6px 0 0;">{esc(cap)}</p>' if cap else "")
+                    f'border:1px solid {TEAL};">'
+                    + (f'<p style="font-size:11px;color:#94a3ab;margin:6px 0 0;text-align:right;">{esc(cap)}</p>' if cap else "")
                     + '</div>'
                 )
 
@@ -376,30 +387,32 @@ def build_email_html(title: str, content_html: str, date_str: str,
   <title>{NEWSLETTER_NAME} — {esc(title)}</title>
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 </head>
-<body style="margin:0;padding:0;background:#f0f2f5;
+<body style="margin:0;padding:0;background:#EEF5F4;
   font-family:'Pretendard','Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',
   'Apple Color Emoji',sans-serif;">
 
 <div style="max-width:660px;margin:0 auto;padding:32px 16px 48px;">
 
-  <!-- ① 헤더 (흰 배경, 좌: 타이틀+날짜 / 우: 로고) -->
+  <!-- ① 헤더 (흰 배경, 캡슐형 상단 — 좌: 브랜드+날짜+부제 / 우: 로고) -->
   <table width="100%" cellpadding="0" cellspacing="0"
-         style="background:#ffffff;border-radius:16px 16px 0 0;border-bottom:3px solid {TEAL};">
+         style="background:#ffffff;border:1.5px solid {TEAL};border-bottom:none;
+         border-radius:16px 16px 0 0;">
     <tr>
-      <td style="padding:24px 32px;">
+      <td style="padding:24px 28px 20px;">
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr>
-            <!-- 좌: 뉴스레터명 + 날짜 -->
+            <!-- 좌: 날짜 · 브랜드명 · 부제(=노션 페이지 제목) -->
             <td style="vertical-align:middle;">
-              <div style="font-size:11px;font-weight:600;color:{TEAL};
-                letter-spacing:1.2px;text-transform:uppercase;margin-bottom:6px;">
-                {ORG_NAME}
+              <div style="font-size:12px;color:#8a97a2;margin-bottom:10px;">
+                {date_str} · {ORG_NAME}
               </div>
-              <div style="font-size:22px;font-weight:800;color:{DARK_NAVY};
-                letter-spacing:-0.5px;line-height:1.2;margin-bottom:6px;">
-                {NEWSLETTER_NAME}
+              <div style="font-size:25px;font-weight:800;color:{DARK_NAVY};
+                letter-spacing:-.5px;line-height:1.3;">
+                🧭 {NEWSLETTER_NAME}
               </div>
-              <div style="font-size:13px;color:#94a3b8;">{date_str}</div>
+              <div style="font-size:13.5px;color:#5c6b78;font-weight:500;margin-top:6px;">
+                {esc(title)}
+              </div>
             </td>
             <!-- 우: 로고 -->
             {logo_cell}
@@ -409,39 +422,27 @@ def build_email_html(title: str, content_html: str, date_str: str,
     </tr>
   </table>
 
-  <!-- ② 제목 배너 (티얼) -->
-  <div style="background:{TEAL};padding:18px 32px;">
-    <div style="font-size:17px;font-weight:700;color:#ffffff;
-      line-height:1.5;letter-spacing:-0.2px;">
-      {esc(title)}
-    </div>
-  </div>
-
-  <!-- ③ 본문 -->
-  <div style="background:#ffffff;padding:36px 32px 32px;">
+  <!-- ② 본문 (카테고리별 기사 블록 — Notion 원고 그대로 렌더링) -->
+  <div style="background:#ffffff;padding:6px 28px 30px;">
     {content_html}
-    <hr style="border:none;border-top:1px solid #e5e7eb;margin:28px 0 20px;">
-    <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.6;">
-    </p>
   </div>
 
-  <!-- ④ 그라디언트 바 -->
-  <div style="height:4px;background:linear-gradient(90deg,{TEAL} 0%,{DARK_NAVY} 100%);"></div>
+  <!-- ③ 푸터 (캡슐형 하단 — 아카이브 CTA) -->
+  <div style="background:#F4FDFC;border:1.5px solid {TEAL};border-top:none;
+    padding:22px 28px;text-align:center;">
+    <a href="{archive_url}" target="_blank" rel="noopener"
+      style="display:inline-block;background:{TEAL};color:#ffffff;text-decoration:none;
+      font-size:14px;font-weight:800;border-radius:10px;padding:12px 26px;margin-bottom:12px;">
+      📂 지난 레터 아카이브 보기
+    </a>
+    <div style="font-size:12.5px;color:#5c6b78;">{ORG_NAME}</div>
+  </div>
 
-  <!-- ⑤ 푸터 -->
-  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;
-    border-radius:0 0 16px 16px;padding:20px 32px;text-align:center;">
-    <div style="margin-bottom:10px;">
-      <a href="{archive_url}" target="_blank" rel="noopener"
-        style="color:{TEAL};text-decoration:none;font-size:13px;font-weight:600;">
-        📂 인재경영실 Insight Letter 아카이브
-      </a>
-      &nbsp;&nbsp;|&nbsp;&nbsp;
-      <span style="color:#94a3b8;font-size:13px;">상상인그룹 인재경영실</span>
-    </div>
-    <div style="font-size:12px;color:#cbd5e1;margin-top:4px;">
-      이 메일은 인재경영실 Insight Letter 구독자에게 발송됩니다.
-    </div>
+  <!-- ④ 하단 바 (틸 색 마감 스트립) -->
+  <div style="background:{TEAL};border-radius:0 0 16px 16px;padding:14px 28px;text-align:center;">
+    <p style="margin:0;font-size:11.5px;color:#ffffff;line-height:1.6;">
+      이 메일은 {NEWSLETTER_NAME} 구독자에게 발송됩니다.
+    </p>
   </div>
 
 </div>
