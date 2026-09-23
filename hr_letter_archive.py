@@ -21,8 +21,10 @@ import requests
 KST            = timezone(timedelta(hours=9))
 ARCHIVE_FILE   = "letters_archive.json"
 INDEX_FILE     = "index.html"
-TEAL           = "#00A7A7"
-DARK_NAVY      = "#1e2235"
+TEAL           = "#00BFB6"   # 포인트 컬러 (R0 G191 B182) — hr_letter.py와 통일
+DARK_NAVY      = "#273646"   # 본문 텍스트 컬러 (R39 G54 B70) — 변수명은 유지, 값만 신규 팔레트로 교체
+LINK_TEXT      = "#00958D"   # 링크 텍스트 실색상(대비 확보용 진한 톤)
+LINK_TINT      = "#B2F0EB"   # 사용자 지정 링크컬러(R178 G240 B235) — 밑줄/하이라이트 전용
 NOTION_API_VER = "2022-06-28"
 
 
@@ -122,7 +124,9 @@ def rt_to_html(rich_texts):
             t = (f'<code style="background:#e6f7f7;color:{TEAL};padding:2px 6px;'
                  f'border-radius:3px;font-size:88%;font-family:monospace;">{t}</code>')
         if h:
-            t = f'<a href="{h}" target="_blank" style="color:{TEAL};text-decoration:underline;">{t}</a>'
+            t = (f'<a href="{h}" target="_blank" rel="noopener"'
+                 f' style="color:{LINK_TEXT};text-decoration:underline;'
+                 f'text-decoration-color:{LINK_TINT};text-decoration-thickness:2px;">{t}</a>')
         out += t
     return out
 
@@ -167,7 +171,7 @@ def blocks_to_html(blocks):
             # 발췌 수집: 20자 이상 의미있는 단락만, 최대 2개 문단
             if plain and len(plain) >= 20 and len(excerpt_parts) < 2:
                 excerpt_parts.append(plain)
-            html += (f'<p style="margin:0 0 16px;line-height:1.8;color:#374151;font-size:15px;">{text}</p>'
+            html += (f'<p style="margin:0 0 16px;line-height:1.8;color:{DARK_NAVY};font-size:15px;">{text}</p>'
                      if text.strip() else '<div style="height:8px;"></div>')
 
         elif bt == "heading_1":
@@ -175,19 +179,22 @@ def blocks_to_html(blocks):
             html += (f'<h1 style="font-size:21px;font-weight:800;color:{DARK_NAVY};'
                      f'margin:32px 0 14px;padding-bottom:10px;border-bottom:2px solid {TEAL};">{t}</h1>')
         elif bt == "heading_2":
+            # 다이제스트 구조에서는 heading_2 = 개별 기사 제목 (hr_letter.py와 스타일 통일)
             t = rt_to_html(b["heading_2"].get("rich_text",[]))
-            html += f'<h2 style="font-size:17px;font-weight:700;color:{DARK_NAVY};margin:26px 0 10px;">{t}</h2>'
+            html += (f'<h2 style="font-size:21px;font-weight:800;color:{DARK_NAVY};'
+                     f'margin:8px 0 10px;line-height:1.4;letter-spacing:-.2px;">{t}</h2>')
         elif bt == "heading_3":
+            # 다이제스트 구조에서 "카테고리 라벨" 또는 "관련기사" 소제목 역할 (hr_letter.py와 스타일 통일)
             t = rt_to_html(b["heading_3"].get("rich_text",[]))
-            html += (f'<h3 style="font-size:13px;font-weight:700;color:{TEAL};'
-                     f'margin:20px 0 8px;text-transform:uppercase;letter-spacing:.6px;">{t}</h3>')
+            html += (f'<h3 style="font-size:13px;font-weight:800;color:{TEAL};'
+                     f'margin:28px 0 2px;letter-spacing:.02em;line-height:1.5;">{t}</h3>')
 
         elif bt == "bulleted_list_item":
             items = ""
             first_plain = ""
             while i < len(blocks) and blocks[i].get("type") == "bulleted_list_item":
                 rts_li = blocks[i]["bulleted_list_item"].get("rich_text",[])
-                items += f'<li style="margin-bottom:8px;line-height:1.7;color:#374151;">{rt_to_html(rts_li)}</li>'
+                items += f'<li style="margin-bottom:8px;line-height:1.7;color:{DARK_NAVY};">{rt_to_html(rts_li)}</li>'
                 if not first_plain:
                     first_plain = redact_secrets("".join(r.get("plain_text","") for r in rts_li)).strip()
                 i += 1
@@ -202,7 +209,7 @@ def blocks_to_html(blocks):
             first_plain = ""
             while i < len(blocks) and blocks[i].get("type") == "numbered_list_item":
                 rts_li = blocks[i]["numbered_list_item"].get("rich_text",[])
-                items += f'<li style="margin-bottom:8px;line-height:1.7;color:#374151;">{rt_to_html(rts_li)}</li>'
+                items += f'<li style="margin-bottom:8px;line-height:1.7;color:{DARK_NAVY};">{rt_to_html(rts_li)}</li>'
                 if not first_plain:
                     first_plain = redact_secrets("".join(r.get("plain_text","") for r in rts_li)).strip()
                 i += 1
@@ -212,22 +219,22 @@ def blocks_to_html(blocks):
             continue
 
         elif bt == "divider":
-            html += f'<hr style="border:none;border-top:2px solid #e5e7eb;margin:28px 0;">'
+            html += f'<hr style="border:none;border-top:1px solid #DCEEEC;margin:32px 0;">'
 
         elif bt == "callout":
             icon_d = b["callout"].get("icon") or {}
             icon   = icon_d.get("emoji","💡") if icon_d.get("type")=="emoji" else "💡"
             t      = rt_to_html(b["callout"].get("rich_text",[]))
             html  += (f'<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px;">'
-                      f'<tr><td style="background:#e6f7f7;border-left:4px solid {TEAL};'
-                      f'border-radius:0 8px 8px 0;padding:14px 18px;line-height:1.75;color:#374151;font-size:15px;">'
+                      f'<tr><td style="background:#F4FDFC;border-left:3px solid {TEAL};'
+                      f'border-radius:0 8px 8px 0;padding:14px 18px;line-height:1.75;color:{DARK_NAVY};font-size:14.5px;">'
                       f'{icon}&nbsp;&nbsp;{t}</td></tr></table>')
 
         elif bt == "quote":
             t = rt_to_html(b["quote"].get("rich_text",[]))
             html += (f'<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px;">'
                      f'<tr><td style="background:#f9fafb;border-left:4px solid {TEAL};'
-                     f'padding:14px 20px;color:#6b7280;font-style:italic;line-height:1.75;'
+                     f'padding:14px 20px;color:#5c6b78;font-style:italic;line-height:1.75;'
                      f'font-size:15px;border-radius:0 8px 8px 0;">{t}</td></tr></table>')
 
         elif bt == "image":
@@ -235,10 +242,10 @@ def blocks_to_html(blocks):
             src = ((img.get("file") or {}).get("url") or (img.get("external") or {}).get("url",""))
             cap = "".join(r.get("plain_text","") for r in img.get("caption",[]))
             if src:
-                html += (f'<div style="text-align:center;margin:0 0 16px;">'
+                html += (f'<div style="text-align:center;margin:4px 0 16px;">'
                          f'<img src="{src}" alt="{esc(cap)}" width="100%"'
-                         f' style="max-width:580px;border-radius:10px;">'
-                         + (f'<p style="font-size:12px;color:#9ca3af;margin:6px 0 0;">{esc(cap)}</p>' if cap else "")
+                         f' style="max-width:580px;border-radius:10px;border:1px solid {TEAL};">'
+                         + (f'<p style="font-size:11px;color:#94a3ab;margin:6px 0 0;text-align:right;">{esc(cap)}</p>' if cap else "")
                          + '</div>')
         i += 1
     excerpt = _build_excerpt(excerpt_parts, max_len=200)
