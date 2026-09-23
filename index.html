@@ -12,7 +12,7 @@
 
     /* ── 헤더 (흰 배경, 모닝브리핑 스타일) ── */
     .site-header{background:#fff;border-bottom:1px solid #e2e8f0}
-    .header-top{max-width:1080px;margin:0 auto;padding:32px 32px 20px;
+    .header-top{max-width:720px;margin:0 auto;padding:32px 32px 20px;
                 display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
     .header-title-area h1{font-size:26px;font-weight:800;color:#273646;
                            letter-spacing:-.5px;line-height:1.25;margin-bottom:6px}
@@ -23,7 +23,7 @@
     .logo-text-fallback{font-size:16px;font-weight:800;color:#273646}
 
     /* 헤더 하단 버튼 행 */
-    .header-actions{max-width:1080px;margin:0 auto;padding:14px 32px 20px;
+    .header-actions{max-width:720px;margin:0 auto;padding:14px 32px 20px;
                     display:flex;align-items:center;gap:10px;flex-wrap:wrap;
                     border-top:1px solid #e2e8f0}
     .btn-intro{display:inline-flex;align-items:center;gap:6px;
@@ -35,7 +35,7 @@
 
     /* 검색 바 */
     .search-bar{background:#fff;border-bottom:1px solid #e2e8f0}
-    .search-inner{max-width:1080px;margin:0 auto;padding:12px 32px;
+    .search-inner{max-width:720px;margin:0 auto;padding:12px 32px;
                   display:flex;gap:12px;align-items:center}
     .search-inner input{flex:1;border:1.5px solid #e2e8f0;border-radius:9px;
                         padding:9px 16px;font-size:14px;outline:none;font-family:inherit;
@@ -45,7 +45,7 @@
     .count-badge strong{color:#00BFB6;font-weight:700}
 
     /* 메인 그리드 */
-    .main{max-width:1080px;margin:0 auto;padding:28px 32px}
+    .main{max-width:720px;margin:0 auto;padding:28px 32px}
     .letters-grid{display:grid;grid-template-columns:1fr;gap:20px}
 
     /* 카드 */
@@ -72,6 +72,17 @@
                   padding:7px 13px;font-size:13px;cursor:pointer;font-family:inherit;
                   display:none;transition:background .15s}
     .btn-collapse:hover{background:#e2e8f0}
+
+    /* 전문 읽는 중 떠 있는 접기 버튼 — 스크롤해도 고정, 읽기 방해 없는 우하단 */
+    .floating-collapse{position:fixed;right:24px;bottom:24px;z-index:50;
+                       display:none;align-items:center;gap:6px;
+                       background:#273646;color:#fff;border:none;border-radius:24px;
+                       padding:11px 20px;font-size:13px;font-weight:600;cursor:pointer;
+                       font-family:inherit;box-shadow:0 6px 20px rgba(39,54,70,.28);
+                       opacity:0;transform:translateY(8px);
+                       transition:opacity .2s ease,transform .2s ease,background .15s}
+    .floating-collapse.show{display:inline-flex;opacity:1;transform:translateY(0)}
+    .floating-collapse:hover{background:#00A29B}
 
     /* 전문 */
     .card-full{display:none;border-top:3px solid #00BFB6;padding:26px 26px 22px;background:#fff}
@@ -106,6 +117,7 @@
       .header-actions{padding:12px 18px 16px}
       .search-inner,.main{padding-left:18px;padding-right:18px}
       .card-full{padding:18px 16px}
+      .floating-collapse{right:16px;bottom:16px;padding:10px 16px}
     }
   </style>
 </head>
@@ -156,6 +168,9 @@
      <a href="https://ssihr.oopy.io/" target="_blank" rel="noopener">ssihr.oopy.io</a></p>
 </footer>
 
+<!-- 전문 읽는 중 떠 있는 접기 버튼 (스크롤해도 고정) -->
+<button class="floating-collapse" id="floatingCollapse" onclick="collapseOpen()">접기 ↑</button>
+
 <script>
 let allLetters=[];
 async function loadData(){
@@ -175,6 +190,7 @@ function escHtml(s){
 function renderGrid(letters){
   const grid=document.getElementById("grid"),empty=document.getElementById("emptyState");
   document.getElementById("letterCount").textContent=letters.length;
+  openIdx=null;document.getElementById("floatingCollapse").classList.remove("show");
   if(!letters.length){grid.innerHTML="";empty.style.display="block";return;}
   empty.style.display="none";
   grid.innerHTML=letters.map((l,idx)=>`
@@ -194,16 +210,29 @@ function renderGrid(letters){
       <div class="card-full" id="full-${idx}"></div>
     </article>`).join("");
 }
+let openIdx=null;
 function expand(btn,idx){
   const full=document.getElementById("full-"+idx);
   if(!full.dataset.loaded){full.innerHTML=allLetters[idx].html_content||"<p>본문 없음</p>";full.dataset.loaded=1;}
   full.style.display="block";btn.style.display="none";
   btn.nextElementSibling.style.display="inline-flex";
   full.scrollIntoView({behavior:"smooth",block:"start"});
+  openIdx=idx;
+  document.getElementById("floatingCollapse").classList.add("show");
 }
 function collapse(btn,idx){
   document.getElementById("full-"+idx).style.display="none";
   btn.style.display="none";btn.previousElementSibling.style.display="inline-flex";
+  if(openIdx===idx){openIdx=null;document.getElementById("floatingCollapse").classList.remove("show");}
+}
+function collapseOpen(){
+  if(openIdx===null)return;
+  const idx=openIdx;
+  const full=document.getElementById("full-"+idx);
+  const card=full.closest(".card");
+  const collapseBtn=card.querySelector(".btn-collapse");
+  collapse(collapseBtn,idx);
+  card.scrollIntoView({behavior:"smooth",block:"start"});
 }
 document.getElementById("searchInput").addEventListener("input",function(){
   const q=this.value.trim().toLowerCase();
